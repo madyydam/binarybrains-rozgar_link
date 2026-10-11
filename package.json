@@ -1,0 +1,31 @@
+{
+  "name": "rozgarlink-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"pnpm --filter @rozgarlink/api dev\" \"pnpm --filter @rozgarlink/web dev\"",
+    "dev:next": "concurrently \"pnpm --filter @rozgarlink/api dev\" \"pnpm --filter @rozgarlink/web dev:next\"",
+    "dev:api": "pnpm --filter @rozgarlink/api dev",
+    "dev:web": "pnpm --filter @rozgarlink/web dev",
+    "build": "pnpm --filter \"@rozgarlink/*\" build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "check:imports": "tsx tooling/check-imports.ts",
+    "typecheck": "tsc --build --dry",
+    "db:migrate": "pnpm --filter @rozgarlink/api db:migrate",
+    "db:seed": "pnpm --filter @rozgarlink/api db:seed",
+    "rebuild:matches": "pnpm --filter @rozgarlink/api rebuild:matches"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.9",
+    "concurrently": "^8.2.2",
+    "fast-check": "^4.10.2",
+    "tsx": "^4.16.2",
+    "typescript": "^5.5.2",
+    "vitest": "^1.6.0"
+  },
+  "dependencies": {
+    "zod": "^4.6.5"
+  }
+}

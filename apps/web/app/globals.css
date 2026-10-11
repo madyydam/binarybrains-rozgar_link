@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-blue: #2F5BFF;
+  --brand-blue-dark: #1E3FCC;
+  --brand-indigo: #5B4BEA;
+  --brand-violet: #7C5CFF;
+  --ink: #0F1B3D;
+  --text: #1B2438;
+  --slate: #64748B;
+  --canvas: #F6F8FC;
+  --card: #FFFFFF;
+  --tint: #EAF0FF;
+  --tint-2: #F3F6FF;
+  --line: #E2E8F3;
+  --ok: #12AE85;
+  --warn: #F59E0B;
+  --fail: #E5484D;
+  --streak: #FEC723;
+  --radius-card: 16px;
+  --radius-pill: 999px;
+  --shadow-card: 0 4px 16px rgba(15, 27, 61, 0.06);
+  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+}
+
+body {
+  background-color: var(--canvas);
+  color: var(--text);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F6F8FC;
+}
+::-webkit-scrollbar-thumb {
+  background: #E2E8F3;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #64748B;
+}
