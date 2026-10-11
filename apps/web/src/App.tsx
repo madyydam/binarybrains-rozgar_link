@@ -1,5 +1,15 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Avatar, StatusBadge } from '@rozgarlink/ui';
+import { GrowthHub, GrowthSubTab } from './components/growth/GrowthHub';
+import { LearnHub } from './components/learn/LearnHub';
+import {
+  SkillDemandInsights,
+  AlternativeCareerPaths,
+  FairnessAuditModal,
+  RecruiterFeedbackCard,
+  EvidenceVaultSection,
+} from './components/edge/EdgeFeatures';
+import { VoiceCareerAssistant } from './components/ai/VoiceCareerAssistant';
 
 /* ─────────────────────────────── Types ─────────────────────────────── */
 interface CandidateProfile {
@@ -54,7 +64,7 @@ interface OpportunityCardData {
   info?: [string, string];
 }
 
-type NavTab = 'home' | 'match' | 'learn' | 'profile' | 'admin';
+type NavTab = 'home' | 'match' | 'growth' | 'learn' | 'profile' | 'admin';
 type MatchTab = 'eligible' | 'saved' | 'applied' | 'info' | 'not_eligible';
 type Locale = 'en' | 'hi' | 'mr';
 
@@ -75,9 +85,9 @@ const COURSES = [
 const SIDEBAR_ITEMS: { id: NavTab; label: string; icon: React.ReactNode }[] = [
   { id: 'home', label: 'Home', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg> },
   { id: 'match', label: 'Match', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 21s-7-4.5-9-9a5 5 0 0 1 9-3 5 5 0 0 1 9 3c-2 4.5-9 9-9 9z" /></svg> },
+  { id: 'growth', label: 'Growth Hub', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg> },
   { id: 'learn', label: 'Learn', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg> },
   { id: 'profile', label: 'Profile', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg> },
-  { id: 'admin', label: 'Admin Console', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg> },
 ];
 
 /* ─────────────── Core Opportunities ─────────────── */
@@ -184,6 +194,7 @@ const ScoreRingCircle: React.FC<{ score: number }> = ({ score }) => {
 /* ══════════════════════════════ APPLICATION ══════════════════════════════ */
 export default function App() {
   const [activeTab, setActiveTab] = useState<NavTab>('home');
+  const [growthSubTab, setGrowthSubTab] = useState<GrowthSubTab>('arena');
   const [currentCandidateId, setCurrentCandidateId] = useState('cand-asha');
   const [candidate, setCandidate] = useState<CandidateProfile | null>(null);
   const [locale, setLocale] = useState<Locale>('en');
@@ -206,6 +217,22 @@ export default function App() {
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [sheetId, setSheetId] = useState<string | null>(null);
   const [applyModalOpp, setApplyModalOpp] = useState<OpportunityCardData | null>(null);
+  const [showFairnessModal, setShowFairnessModal] = useState(false);
+  const [selectedPathway, setSelectedPathway] = useState<'all' | 'job' | 'apprenticeship' | 'govt' | 'trainee'>('all');
+
+  const getOppPathway = (typeStr: string): 'job' | 'apprenticeship' | 'govt' | 'trainee' => {
+    const t = (typeStr || '').toLowerCase();
+    if (t.includes('apprentice')) return 'apprenticeship';
+    if (t.includes('govt')) return 'govt';
+    if (t.includes('trainee') || t.includes('intern')) return 'trainee';
+    return 'job';
+  };
+
+  const activeDeck = deck.filter((id) => {
+    if (selectedPathway === 'all') return true;
+    const o = opps[id];
+    return o && getOppPathway(o.type) === selectedPathway;
+  });
 
   /* ── Drag & Swipe Interaction State ── */
   const dragRef = useRef<{ x: number; y: number; t: number; dx: number; dy: number } | null>(null);
@@ -219,11 +246,33 @@ export default function App() {
   const [extractedSkills, setExtractedSkills] = useState<{ skillId: string; name: string }[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
 
-  /* ── Admin / Officer Console State ── */
-  const [officerRuleType, setOfficerRuleType] = useState('QUAL_MIN_LEVEL');
-  const [officerRuleVal, setOfficerRuleVal] = useState('4');
-  const [officerRuleLabel, setOfficerRuleLabel] = useState('Requires minimum ITI qualification');
-  const [officerPreview, setOfficerPreview] = useState<{ eligibleCount: number; totalCandidates: number } | null>(null);
+
+
+  /* ── Floating AI Assistant State ── */
+  const [aiDrawerOpen, setAiDrawerOpen] = useState(false);
+  const [aiChatMessages, setAiChatMessages] = useState<Array<{ sender: 'bot' | 'user'; text: string }>>([
+    { sender: 'bot', text: 'Namaste Asha! I am your ROZGARSATHI AI Career Assistant. How can I assist your job search, skill roadmaps, or eligibility today?' },
+  ]);
+  const [aiChatInput, setAiChatInput] = useState('');
+
+  const handleSendAiMessage = (customMsg?: string) => {
+    const msg = customMsg || aiChatInput;
+    if (!msg.trim()) return;
+    setAiChatMessages((prev) => [...prev, { sender: 'user', text: msg }]);
+    setAiChatInput('');
+
+    setTimeout(() => {
+      let reply = "Based on your verified 12th pass qualifications and electrical practicum, you have 3 eligible roles in Pune and Thane. Enrolling in the 'Industrial Control Panel Wiring' course will unlock higher pay apprenticeships at MSEDCL!";
+      if (msg.toLowerCase().includes('course')) {
+        reply = "Recommended for you: 'Advanced Rooftop Solar PV Engineering' (Suryamitra, 60h) and 'Panel Wiring' (MSBVEE). These match high-demand hiring cycles in Maharashtra.";
+      } else if (msg.toLowerCase().includes('mahagen') || msg.toLowerCase().includes('fire')) {
+        reply = "For Mahagenco Plant Operator Trainee, you currently need a valid Fire Safety Certificate. You can acquire this via our free 12-hour NSDC course on the Learn tab.";
+      } else if (msg.toLowerCase().includes('salary') || msg.toLowerCase().includes('pay')) {
+        reply = "Your target pay is ₹18,000–₹24,000/mo. Verified recruiter roles at Flipkart Logistics and NMC currently meet or exceed this target minimum!";
+      }
+      setAiChatMessages((prev) => [...prev, { sender: 'bot', text: reply }]);
+    }, 400);
+  };
 
   /* ── Toast Helper ── */
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -307,11 +356,13 @@ export default function App() {
   /* ── Commit Swipe Action ── */
   const commit = useCallback((action: 'like' | 'skip' | 'save') => {
     if (!deck.length) return;
-    const id = deck[0];
+    const topCardId = (selectedPathway === 'all' ? deck[0] : (activeDeck[0] || deck[0]));
+    if (!topCardId) return;
+    const id = topCardId;
     setFlyOut({ action });
 
     setTimeout(() => {
-      setDeck((prev) => prev.slice(1));
+      setDeck((prev) => prev.filter((item) => item !== id));
       setHistory((prev) => [...prev, { id, action }]);
       if (id === newId) setNewId(null);
       if (action === 'save') setSavedIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
@@ -325,7 +376,7 @@ export default function App() {
       const actionText = { like: 'Expressed Interest in Role', skip: 'Passed on Opportunity', save: 'Saved to Opportunities' }[action];
       triggerToast(actionText);
     }, 240);
-  }, [deck, newId, triggerToast]);
+  }, [deck, activeDeck, selectedPathway, newId, triggerToast]);
 
   /* ── Undo Last Action ── */
   const undo = useCallback(() => {
@@ -474,19 +525,7 @@ export default function App() {
     triggerToast(`Skill added to verified profile.`);
   };
 
-  const handleOfficerPreview = async () => {
-    try {
-      const val = officerRuleType === 'QUAL_MIN_LEVEL' ? Number(officerRuleVal) : officerRuleVal;
-      const res = await fetch('/v1/opportunities/preview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          rules: [{ id: 'rule-test-1', type: officerRuleType, operator: 'gte', value: val, label: officerRuleLabel, requiresVerification: true, version: 1 }]
-        }),
-      });
-      if (res.ok) setOfficerPreview(await res.json());
-    } catch {}
-  };
+
 
   /* ── Top Card Transform ── */
   const dragRot = Math.max(-12, Math.min(12, dragOffset.dx / 20));
@@ -527,7 +566,7 @@ export default function App() {
             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
           </svg>
         </div>
-        <span className="mobile-brand-name">RZGARSATHI</span>
+        <span className="mobile-brand-name">ROZGARSATHI</span>
       </div>
       <div className="mobile-topbar-right">
         <button className="mobile-icon-btn" onClick={() => setActiveTab('match')} aria-label="Matches">
@@ -553,7 +592,7 @@ export default function App() {
           </div>
           {sidebarOpen && (
             <div className="sidebar-brand-text">
-              <span className="sidebar-brand-name">RZGARSATHI</span>
+              <span className="sidebar-brand-name">ROZGARSATHI</span>
               <span className="sidebar-brand-sub">National Career Match</span>
             </div>
           )}
@@ -590,39 +629,27 @@ export default function App() {
           })}
         </nav>
 
-        {sidebarOpen && (
-          <div className="sidebar-bottom">
-            <div className="sidebar-bottom-group">
-              <label className="sidebar-bottom-label">Persona Candidate</label>
-              <select
-                value={currentCandidateId}
-                onChange={(e) => setCurrentCandidateId(e.target.value)}
-                className="sidebar-select"
-              >
-                <option value="cand-asha">Asha Patil (12th Pass · Pune)</option>
-                <option value="cand-rahul">Rahul Deshmukh (ITI · Pune)</option>
-                <option value="cand-meena">Meena Shinde (B.Sc · Nashik)</option>
-                <option value="cand-edge-age">Ramesh (Age 36 · Edge)</option>
-                <option value="cand-edge-residence">Sneha (Gujarat Resident)</option>
-              </select>
+        <div className="sidebar-bottom">
+          <div
+            className="sidebar-user-card"
+            onClick={() => setActiveTab('profile')}
+            title="View Profile (Asha Patil)"
+          >
+            <div className="sidebar-user-avatar">
+              <span>AP</span>
+              <span className="sidebar-user-status" />
             </div>
-            <div className="sidebar-lang">
-              {(['en', 'hi', 'mr'] as const).map((l) => (
-                <button
-                  key={l}
-                  onClick={() => setLocale(l)}
-                  className={`sidebar-lang-btn ${locale === l ? 'active' : ''}`}
-                >
-                  {l === 'en' ? 'EN' : l === 'hi' ? 'हिं' : 'मरा'}
-                </button>
-              ))}
-            </div>
-            <div className="sidebar-live-pill">
-              <span className="live-dot" />
-              <span>Live Engine Ready</span>
-            </div>
+            {sidebarOpen && (
+              <div className="sidebar-user-info">
+                <div className="sidebar-user-name-row">
+                  <span className="sidebar-user-name">{candidate?.name || 'Asha Patil'}</span>
+                  <span className="sidebar-verified-badge" title="Verified Candidate">✓</span>
+                </div>
+                <span className="sidebar-user-role">12th Pass · Pune, MH</span>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </aside>
 
       {/* ──────────── MAIN CONTENT CONTAINER ──────────── */}
@@ -668,7 +695,7 @@ export default function App() {
                 <span className="home-hero-tagline">Build · Learn · Grow</span>
                 <h2 className="home-hero-title">Your Verified Tech & Vocational Journey</h2>
                 <p className="home-hero-sub">
-                  Connect with verified recruiter roles, upgrade your skills with certified paths, and track transparent career milestones with RZGARSATHI.
+                  Connect with verified recruiter roles, upgrade your skills with certified paths, and track transparent career milestones with ROZGARSATHI.
                 </p>
                 <button onClick={() => setActiveTab('match')} className="home-hero-cta">
                   <span>Discover Opportunities</span>
@@ -703,6 +730,86 @@ export default function App() {
                   </div>
                 </button>
               ))}
+            </div>
+
+            {/* Growth OS & Career Accelerators (Integrated from Futora Career OS) */}
+            <section className="home-growth-shortcuts-section">
+              <div className="home-section-header">
+                <div>
+                  <h3 className="home-section-title">Growth Accelerators & Skill Arena</h3>
+                  <p className="home-section-sub">Level up with live practice, AI mock interviews, 1:1 mentorship & national hackathons.</p>
+                </div>
+                <button
+                  onClick={() => { setActiveTab('growth'); setGrowthSubTab('arena'); }}
+                  className="home-see-all"
+                >
+                  Open Growth Hub →
+                </button>
+              </div>
+
+              <div className="home-growth-cards-grid">
+                <div
+                  onClick={() => { setActiveTab('growth'); setGrowthSubTab('arena'); }}
+                  className="home-growth-card arena-card"
+                >
+                  <div className="growth-card-top">
+                    <span className="growth-card-icon">💻</span>
+                    <span className="growth-card-badge">🔥 14-Day Streak</span>
+                  </div>
+                  <h4 className="growth-card-title">Code Arena & 100 Days</h4>
+                  <p className="growth-card-desc">In-browser IDE with JavaScript, Python, C++, and Java. Solve today's challenge to earn +50 XP.</p>
+                  <div className="growth-card-cta">Start Coding →</div>
+                </div>
+
+                <div
+                  onClick={() => { setActiveTab('growth'); setGrowthSubTab('interview'); }}
+                  className="home-growth-card interview-card"
+                >
+                  <div className="growth-card-top">
+                    <span className="growth-card-icon">🤖</span>
+                    <span className="growth-card-badge">Razorpay · Zepto</span>
+                  </div>
+                  <h4 className="growth-card-title">AI Mock Interview Coach</h4>
+                  <p className="growth-card-desc">Simulate realistic Technical, System Design, and HR interview rounds with instant AI evaluation.</p>
+                  <div className="growth-card-cta">Launch Interview →</div>
+                </div>
+
+                <div
+                  onClick={() => { setActiveTab('growth'); setGrowthSubTab('mentors'); }}
+                  className="home-growth-card mentor-card"
+                >
+                  <div className="growth-card-top">
+                    <span className="growth-card-icon">🤝</span>
+                    <span className="growth-card-badge">⭐ 4.9 Rated</span>
+                  </div>
+                  <h4 className="growth-card-title">1-on-1 Mentorship</h4>
+                  <p className="growth-card-desc">Book 45-minute portfolio reviews and system design guidance with verified senior tech leads.</p>
+                  <div className="growth-card-cta">Book Session →</div>
+                </div>
+
+                <div
+                  onClick={() => { setActiveTab('growth'); setGrowthSubTab('events'); }}
+                  className="home-growth-card comp-card"
+                >
+                  <div className="growth-card-top">
+                    <span className="growth-card-icon">🏆</span>
+                    <span className="growth-card-badge">SIH 2026 Open</span>
+                  </div>
+                  <h4 className="growth-card-title">Hackathons & Contests</h4>
+                  <p className="growth-card-desc">Compete for ₹25 Lakhs+ in cash awards, direct incubation, and Pre-Placement Offers (PPOs).</p>
+                  <div className="growth-card-cta">Explore Contests →</div>
+                </div>
+              </div>
+            </section>
+
+            {/* FEATURE 6: SKILL DEMAND INSIGHTS (Maharashtra Labor Market Pulse) */}
+            <div style={{ marginTop: 24, marginBottom: 24 }}>
+              <SkillDemandInsights onExploreSkill={() => setActiveTab('learn')} />
+            </div>
+
+            {/* FEATURE 3: ALTERNATIVE CAREER PATHS (Transferable Skills Engine) */}
+            <div style={{ marginTop: 24, marginBottom: 24 }}>
+              <AlternativeCareerPaths onSelectPath={() => setActiveTab('learn')} />
             </div>
 
             {/* Recommended Courses (Responsive 4-column Grid) */}
@@ -812,78 +919,204 @@ export default function App() {
           </div>
         )}
 
+        {/* ══════════════ GROWTH HUB & CAREER OS ══════════════ */}
+        {activeTab === 'growth' && (
+          <div className="screen-home">
+            <MobileTopBar />
+            <GrowthHub
+              activeSubTab={growthSubTab}
+              setActiveSubTab={setGrowthSubTab}
+              onToast={triggerToast}
+            />
+          </div>
+        )}
+
         {/* ══════════════ 2. MATCH — TINDER-INSPIRED OPPORTUNITY DISCOVERY ══════════════ */}
         {activeTab === 'match' && (
           <div className="screen-home">
             <MobileTopBar />
 
             {/* Header */}
-            <div className="screen-header">
-              <h1 className="screen-title">Discover Opportunities</h1>
-              <p className="screen-sub">Find verified roles matching your qualifications, skills, and preferences.</p>
-            </div>
-
-            {/* Controls Bar */}
-            <div className="match-top-controls">
-              {/* Filter Tabs */}
-              <div className="match-tabs" role="tablist">
-                <button
-                  className={`match-tab-btn ${matchTab === 'eligible' ? 'active' : ''}`}
-                  onClick={() => setMatchTab('eligible')}
-                >
-                  <span>Eligible Deck</span>
-                  <span className="match-tab-badge">{deck.length}</span>
-                </button>
-                <button
-                  className={`match-tab-btn ${matchTab === 'saved' ? 'active' : ''}`}
-                  onClick={() => setMatchTab('saved')}
-                >
-                  <span>Saved</span>
-                  <span className="match-tab-badge">{savedIds.length}</span>
-                </button>
-                <button
-                  className={`match-tab-btn ${matchTab === 'applied' ? 'active' : ''}`}
-                  onClick={() => setMatchTab('applied')}
-                >
-                  <span>Interested</span>
-                  <span className="match-tab-badge">{appliedIds.length}</span>
-                </button>
-                <button
-                  className={`match-tab-btn ${matchTab === 'info' ? 'active' : ''}`}
-                  onClick={() => setMatchTab('info')}
-                >
-                  <span>Need Info</span>
-                  <span className="match-tab-badge">{needInfoIds.length}</span>
-                </button>
-                <button
-                  className={`match-tab-btn ${matchTab === 'not_eligible' ? 'active' : ''}`}
-                  onClick={() => setMatchTab('not_eligible')}
-                >
-                  <span>Not Eligible</span>
-                  <span className="match-tab-badge">{notEligIds.length}</span>
-                </button>
-              </div>
-
-              {/* What-If Simulation Bar */}
-              <div className="whatif-bar">
-                <div className="whatif-bar-left">
-                  <span>⚡</span>
-                  <span><strong>What-if Simulation:</strong> Add ITI Electrician</span>
+            <div className="screen-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <h1 className="screen-title" style={{ margin: 0 }}>Discover Opportunities</h1>
+                  <span className="card-chip" style={{ background: '#EBF0FF', color: '#345BFF', fontWeight: 700, padding: '4px 10px', fontSize: 11 }}>
+                    {deck.length} Verified Eligible
+                  </span>
                 </div>
+                <p className="screen-sub" style={{ marginTop: 4 }}>
+                  Find verified roles matching your qualifications, skills, and preferences with explainable ranking.
+                </p>
+              </div>
+
+              {/* Action Controls: What-If Simulation & Fairness Audit */}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                 <button
-                  className="sw"
-                  role="switch"
-                  aria-checked={whatIf}
-                  aria-label="Toggle What-If ITI Electrician"
                   onClick={handleWhatIfToggle}
-                />
+                  style={{
+                    background: whatIf ? '#10B981' : '#F1F5F9',
+                    color: whatIf ? '#fff' : '#0F172A',
+                    fontWeight: 700,
+                    padding: '7px 14px',
+                    cursor: 'pointer',
+                    border: '1px solid',
+                    borderColor: whatIf ? '#059669' : '#CBD5E1',
+                    borderRadius: 12,
+                    fontSize: 12,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6
+                  }}
+                  title="Simulate adding ITI Electrician qualification to re-rank opportunities dynamically"
+                >
+                  <span>⚡</span>
+                  <span>{whatIf ? 'What-If: ITI Active (+1 Role)' : 'Simulate ITI Qualification'}</span>
+                </button>
+
+                <button
+                  onClick={() => setShowFairnessModal(true)}
+                  style={{
+                    background: '#0F1B3D',
+                    color: '#fff',
+                    fontWeight: 700,
+                    padding: '7px 14px',
+                    cursor: 'pointer',
+                    borderRadius: 12,
+                    fontSize: 12,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    border: 'none',
+                    boxShadow: '0 2px 6px rgba(15,27,61,0.2)'
+                  }}
+                  title="View audited, demographic-blind scoring methodology"
+                >
+                  <span>⚖️</span>
+                  <span>Fairness & Bias Audit</span>
+                </button>
               </div>
             </div>
 
-            {/* What-if Banner */}
-            <div className={`match-banner ${matchBanner ? 'on' : ''}`}>
-              {matchBanner}
+            {/* Match Banner if triggered by What-If Dynamic Re-matching */}
+            {matchBanner && (
+              <div style={{
+                background: '#ECFDF5',
+                border: '1px solid #A7F3D0',
+                color: '#065F46',
+                padding: '10px 16px',
+                borderRadius: 14,
+                marginBottom: 16,
+                fontSize: 13,
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <span>{matchBanner}</span>
+                <button onClick={() => setMatchBanner(null)} style={{ background: 'none', border: 'none', color: '#065F46', cursor: 'pointer', fontWeight: 800 }}>✕</button>
+              </div>
+            )}
+
+            {/* Sub-Tabs Navigation Strip */}
+            <div style={{
+              display: 'flex',
+              gap: 8,
+              borderBottom: '1px solid #E2E8F0',
+              paddingBottom: 10,
+              marginBottom: 16,
+              overflowX: 'auto'
+            }}>
+              {[
+                { id: 'eligible' as MatchTab, label: '🔥 Eligible Deck', count: deck.length },
+                { id: 'saved' as MatchTab, label: '★ Saved', count: savedIds.length },
+                { id: 'applied' as MatchTab, label: '📋 Applied & Recruiter Feedback', count: appliedIds.length },
+                { id: 'info' as MatchTab, label: '⚠️ Need Info', count: needInfoIds.length },
+                { id: 'not_eligible' as MatchTab, label: '🚫 Requirement Gaps', count: notEligIds.length },
+              ].map((t) => {
+                const isActive = matchTab === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => setMatchTab(t.id)}
+                    style={{
+                      background: isActive ? '#345BFF' : '#F8FAFC',
+                      color: isActive ? '#fff' : '#64748B',
+                      border: '1px solid',
+                      borderColor: isActive ? '#345BFF' : '#E2E8F0',
+                      borderRadius: 12,
+                      padding: '8px 14px',
+                      fontSize: 12,
+                      fontWeight: isActive ? 700 : 600,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <span>{t.label}</span>
+                    <span style={{
+                      background: isActive ? 'rgba(255,255,255,0.25)' : '#E2E8F0',
+                      color: isActive ? '#fff' : '#475569',
+                      padding: '1px 6px',
+                      borderRadius: 99,
+                      fontSize: 10,
+                      fontWeight: 800
+                    }}>
+                      {t.count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
+
+            {/* Multi-Pathway Recommendations Filter (Visible on Deck) */}
+            {matchTab === 'eligible' && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                marginBottom: 16,
+                overflowX: 'auto',
+                paddingBottom: 4
+              }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>
+                  Pathway Filter:
+                </span>
+                {[
+                  { id: 'all', label: 'All Pathways' },
+                  { id: 'job', label: '💼 Full-Time Jobs' },
+                  { id: 'apprenticeship', label: '⚡ Apprenticeships' },
+                  { id: 'govt', label: '🏛️ Govt Schemes / PSU' },
+                  { id: 'trainee', label: '🎓 Trainee & Internships' },
+                ].map((p) => {
+                  const isSel = selectedPathway === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => setSelectedPathway(p.id as any)}
+                      style={{
+                        background: isSel ? '#EFF6FF' : '#FFF',
+                        color: isSel ? '#2563EB' : '#475569',
+                        border: '1px solid',
+                        borderColor: isSel ? '#93C5FD' : '#E2E8F0',
+                        borderRadius: 10,
+                        padding: '5px 12px',
+                        fontSize: 11,
+                        fontWeight: isSel ? 700 : 500,
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      {p.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Tab 1: Eligible Swipe Deck */}
             {matchTab === 'eligible' && (
@@ -912,33 +1145,52 @@ export default function App() {
                           </button>
                         </div>
                       </div>
+                    ) : activeDeck.length === 0 ? (
+                      <div className="swipe-empty-deck" style={{ padding: 28, textAlign: 'center', background: '#fff', borderRadius: 24, border: '1px solid #E2E8F0', maxWidth: 440, margin: '20px auto' }}>
+                        <div style={{ fontSize: 36 }}>⚡</div>
+                        <h3 className="swipe-empty-title" style={{ fontSize: 16, marginTop: 8 }}>No Active Roles in This Pathway</h3>
+                        <p className="swipe-empty-sub" style={{ fontSize: 12, marginTop: 4 }}>
+                          Your current profile meets qualifications for full-time jobs, but apprenticeships require ITI certification.
+                        </p>
+                        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 14 }}>
+                          <button
+                            onClick={handleWhatIfToggle}
+                            className="btn-primary"
+                            style={{ fontSize: 12, padding: '7px 14px' }}
+                          >
+                            ⚡ Simulate ITI Qualification (+1 Role)
+                          </button>
+                          <button
+                            onClick={() => setSelectedPathway('all')}
+                            className="match-tab-btn"
+                            style={{ fontSize: 12 }}
+                          >
+                            View All Pathways
+                          </button>
+                        </div>
+                      </div>
                     ) : (
-                      deck.slice(0, 3).map((id, index) => {
+                      activeDeck.slice(0, 3).map((id, index) => {
                         const o = opps[id];
                         if (!o) return null;
                         const isTop = index === 0;
-                        const depth = index; // 0, 1, 2
-
-                        let cardTransform = `translateY(${depth * 10}px) scale(${1 - depth * 0.035})`;
-                        let cardTransition = 'transform .24s ease';
-                        let zIndex = 10 - depth;
-
-                        if (isTop) {
-                          cardTransform = topTransform;
-                          cardTransition = topTransition;
-                        }
 
                         return (
                           <article
                             key={id}
-                            className={`opp-swipe-card ${isTop ? 'top-card' : ''} ${isTop && isDragging ? 'dragging' : ''}`}
+                            className={`opp-swipe-card card-pos-${index} ${isTop ? 'top-card' : ''} ${isTop && isDragging ? 'dragging' : ''}`}
                             style={{
-                              transform: cardTransform,
-                              transition: cardTransition,
-                              zIndex,
-                              pointerEvents: isTop ? 'auto' : 'none',
-                              opacity: isTop && flyOut ? 0 : 1
+                              transform: isTop ? topTransform : undefined,
+                              transition: isTop ? topTransition : undefined,
+                              opacity: isTop && flyOut ? 0 : undefined,
                             }}
+                            onClick={!isTop ? () => {
+                              setDeck((prev) => {
+                                const target = prev[index];
+                                const rest = prev.filter((_, i) => i !== index);
+                                return [target, ...rest];
+                              });
+                            } : undefined}
                             onPointerDown={isTop ? handlePointerDown : undefined}
                             onPointerMove={isTop ? handlePointerMove : undefined}
                             onPointerUp={isTop ? handlePointerEnd : undefined}
@@ -990,13 +1242,23 @@ export default function App() {
 
                               <div className="card-elig-banner">
                                 <span>✓ You meet all {o.rules.length} mandatory criteria</span>
-                                <button
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); setSheetId(o.id); }}
-                                  className="card-audit-link"
-                                >
-                                  See Audit
-                                </button>
+                                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); setShowFairnessModal(true); }}
+                                    className="card-audit-link"
+                                    title="View audited, bias-free scoring breakdown"
+                                  >
+                                    ⚖️ Bias Audit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); setSheetId(o.id); }}
+                                    className="card-audit-link"
+                                  >
+                                    See Criteria
+                                  </button>
+                                </div>
                               </div>
                             </div>
 
@@ -1028,7 +1290,7 @@ export default function App() {
                     <button
                       className="swipe-action-btn pass"
                       title="Pass role (Swipe Left / ←)"
-                      disabled={!deck.length}
+                      disabled={!activeDeck.length}
                       onClick={() => commit('skip')}
                       aria-label="Pass"
                     >
@@ -1037,7 +1299,7 @@ export default function App() {
                     <button
                       className="swipe-action-btn save"
                       title="Save role (Swipe Up / ↑)"
-                      disabled={!deck.length}
+                      disabled={!activeDeck.length}
                       onClick={() => commit('save')}
                       aria-label="Save"
                     >
@@ -1046,10 +1308,11 @@ export default function App() {
                     <button
                       className="swipe-action-btn interested"
                       title="Express Interest / Apply (Swipe Right / →)"
-                      disabled={!deck.length}
+                      disabled={!activeDeck.length}
                       onClick={() => {
-                        if (deck[0]) {
-                          setApplyModalOpp(opps[deck[0]]);
+                        const topId = activeDeck[0] || deck[0];
+                        if (topId) {
+                          setApplyModalOpp(opps[topId]);
                         }
                       }}
                       aria-label="Apply or Express Interest"
@@ -1061,21 +1324,6 @@ export default function App() {
                     Drag the card left/right, use buttons, or press <strong>← ↑ →</strong>
                   </span>
                 </div>
-
-                {/* Desktop Explainer Card */}
-                <aside className="match-desktop-explainer">
-                  <h3 className="explainer-title">Opportunity Discovery Guide</h3>
-                  <ul className="explainer-list">
-                    <li>Only <strong>deterministically eligible</strong> roles appear in your swipe deck.</li>
-                    <li><strong>Swipe Right (→)</strong>: Express interest and start application workflow.</li>
-                    <li><strong>Swipe Left (←)</strong>: Pass on this role without affecting other matches.</li>
-                    <li><strong>Swipe Up (↑)</strong>: Save for later review in your Saved tab.</li>
-                    <li>Click <strong>See Audit</strong> on any card to inspect the full criteria breakdown.</li>
-                  </ul>
-                  <div className="explainer-tip-box">
-                    <strong>⚡ Simulation Sandbox:</strong> Toggle the What-If switch above to see how acquiring an ITI Electrician qualification unlocks government apprenticeships instantly!
-                  </div>
-                </aside>
               </div>
             )}
 
@@ -1115,31 +1363,75 @@ export default function App() {
               </div>
             )}
 
-            {/* Tab 3: Interested / Applied Roles List */}
+            {/* Tab 3: Interested / Applied Roles & Recruiter Feedback Loop */}
             {matchTab === 'applied' && (
-              <div className="match-list-view">
+              <div className="match-list-view" style={{ maxWidth: 720, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{
+                  padding: 16,
+                  borderRadius: 18,
+                  background: 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)',
+                  border: '1px solid #C7D2FE',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 12
+                }}>
+                  <span style={{ fontSize: 24, flexShrink: 0 }}>🔄</span>
+                  <div style={{ fontSize: 12, color: '#1E1B4B' }}>
+                    <b style={{ display: 'block', fontSize: 13, fontWeight: 800, marginBottom: 2 }}>
+                      Recruiter Feedback Loop Active
+                    </b>
+                    <p style={{ margin: 0, color: '#3730A3', lineHeight: 1.5 }}>
+                      When you express interest, employers review your verified proof-of-work and return structured ratings and interview guidance. You can also transmit questions directly to the hiring desk.
+                    </p>
+                  </div>
+                </div>
+
                 {appliedIds.length === 0 ? (
-                  <div className="swipe-empty-deck">
-                    <div style={{ fontSize: 36 }}>📋</div>
-                    <h3 className="swipe-empty-title">No Active Applications</h3>
-                    <p className="swipe-empty-sub">Roles where you've expressed interest or submitted applications appear here.</p>
-                    <button onClick={() => setMatchTab('eligible')} className="btn-primary">Discover Roles</button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    <div className="swipe-empty-deck" style={{ padding: 24, textAlign: 'center', background: '#fff', borderRadius: 20, border: '1px solid #E2E8F0' }}>
+                      <div style={{ fontSize: 36 }}>📋</div>
+                      <h3 className="swipe-empty-title">No Custom Applications Yet</h3>
+                      <p className="swipe-empty-sub">
+                        Swipe Right on cards in the Eligible Deck, or preview live recruiter feedback below:
+                      </p>
+                      <button
+                        onClick={() => { setAppliedIds(['flip']); triggerToast('Loaded Flipkart application with live feedback'); }}
+                        className="btn-primary"
+                        style={{ marginTop: 10, fontSize: 12, padding: '7px 16px' }}
+                      >
+                        Preview Live Feedback on Flipkart Logistics →
+                      </button>
+                    </div>
+
+                    <RecruiterFeedbackCard
+                      orgName="MSEDCL Circle, Pune"
+                      roleTitle="Control Panel Technician (Apprentice)"
+                      status="Shortlisted · Interview Scheduled"
+                      rating="4.9 / 5"
+                      recruiterNotes="Candidate holds verified MSBVEE control panel assembly credential and 12th technical marksheet. Priority applicant under Maharashtra State Apprenticeship Scheme. Reporting date: Next Tuesday 10:00 AM at Pune circle office."
+                      onSendQuestion={() => triggerToast('Question transmitted to MSEDCL talent acquisition coordinator.')}
+                    />
                   </div>
                 ) : (
                   appliedIds.map((id) => {
                     const o = opps[id];
                     if (!o) return null;
                     return (
-                      <div key={id} className="match-list-card">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span className="match-list-card-title">{o.title}</span>
-                          <span className="status-strip ok">✓ Expression of Interest Recorded</span>
-                        </div>
-                        <span className="match-list-card-sub">{o.org} · {o.loc} · Verified Candidate</span>
-                        <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>
-                          Recruiter has been notified of your verified credentials.
-                        </p>
-                      </div>
+                      <RecruiterFeedbackCard
+                        key={id}
+                        orgName={o.org}
+                        roleTitle={o.title}
+                        status="Application Under Active Review"
+                        rating={o.score ? `${(o.score / 20).toFixed(1)} / 5` : '4.8 / 5'}
+                        recruiterNotes={
+                          id === 'flip'
+                            ? "Candidate verified for 12th pass and Bhiwandi warehouse intake accuracy. High suitability for RF scanner dispatch operations. Shift coordinator will confirm induction slot."
+                            : id === 'msedcl'
+                            ? "Priority apprentice candidate under National Apprenticeship Promotion Scheme. Practicum schematics match panel wiring requirements."
+                            : `Profile verified against ${o.rules.length} mandatory criteria. Recruiter notified of deterministic credentials.`
+                        }
+                        onSendQuestion={() => triggerToast(`Question transmitted to ${o.org} recruitment desk.`)}
+                      />
                     );
                   })
                 )}
@@ -1192,179 +1484,373 @@ export default function App() {
           </div>
         )}
 
-        {/* ══════════════ 3. LEARN & BUILD SKILLS ══════════════ */}
+        {/* ══════════════ 3. LEARN & BUILD SKILLS (FUTORA CAREER OS ACADEMY) ══════════════ */}
         {activeTab === 'learn' && (
-          <div className="screen-learn">
+          <div className="screen-home">
             <MobileTopBar />
-
-            <div className="screen-header">
-              <h1 className="screen-title">Learn & Build Skills</h1>
-              <p className="screen-sub">Structured vocational paths, practical modules, and certified skill roadmaps.</p>
-            </div>
-
-            {/* Subtabs */}
-            <div className="learn-tabs">
-              {(['Courses', 'Paths', 'Practice', 'My Learning'] as const).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setLearnSubTab(t)}
-                  className={`learn-tab-btn ${learnSubTab === t ? 'active' : ''}`}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-
-            {/* Layout Grid */}
-            <div className="learn-layout-grid">
-              {/* Courses Vertical List */}
-              <div className="courses-vertical-list">
-                {COURSES.map((c) => {
-                  const isCompleted = candidate?.completedCourses.includes(c.id);
-                  return (
-                    <div key={c.id} className="course-row-card">
-                      <div className={`course-row-icon bg-gradient-to-br ${c.color}`}>
-                        <span>{c.icon}</span>
-                      </div>
-                      <div className="course-row-body">
-                        <span className="text-xs font-bold text-[#345BFF]">{c.provider} · {c.cost}</span>
-                        <h4 className="course-row-title">{c.title}</h4>
-                        <span className="course-row-sub">{c.skills.join(' · ')}</span>
-                        <div className="course-row-bar-wrap">
-                          <div className="course-row-bar">
-                            <div className="course-row-bar-fill" style={{ width: `${isCompleted ? 100 : 0}%` }} />
-                          </div>
-                          <span className="text-xs font-semibold text-[#64748B]">
-                            {isCompleted ? 'Completed ✓' : `${c.modules} modules · ${c.hours}h`}
-                          </span>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => !isCompleted && handleCompleteCourse(c.id)}
-                        className={`btn-primary ${isCompleted ? 'opacity-50 pointer-events-none' : ''}`}
-                        style={{ fontSize: 12, padding: '8px 16px' }}
-                      >
-                        {isCompleted ? 'Completed' : 'Enroll →'}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* AI Skill Extractor Box */}
-              <aside className="ai-extractor-box">
-                <div className="ai-box-header">
-                  <div className="ai-box-badge">AI</div>
-                  <div>
-                    <h3 className="text-base font-extrabold text-[#14213D]">AI Skill Extractor</h3>
-                    <p className="text-xs text-[#64748B]">Paste your bio, resume or work experience</p>
-                  </div>
-                </div>
-                <textarea
-                  value={aiExtractText}
-                  onChange={(e) => setAiExtractText(e.target.value)}
-                  placeholder="Example: I worked for 2 years as an apprentice in solar rooftop installations in Satara..."
-                  rows={4}
-                  className="ai-textarea"
-                />
-                <button
-                  onClick={handleExtractSkills}
-                  disabled={aiLoading}
-                  className="ai-extract-btn"
-                >
-                  {aiLoading ? 'Analyzing text...' : 'Extract Skills with AI'}
-                </button>
-                {extractedSkills.length > 0 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
-                    <span className="text-xs font-bold text-[#14213D]">Confirm skills to add to profile:</span>
-                    <div className="ai-chips-list">
-                      {extractedSkills.map((sk) => (
-                        <button
-                          key={sk.skillId}
-                          onClick={() => handleConfirmExtractedSkill(sk.skillId)}
-                          className="ai-skill-chip-btn"
-                        >
-                          + {sk.name} (Add)
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                <span className="text-[11px] text-[#64748B] leading-tight">
-                  🛡️ <strong>Guarantee:</strong> AI normalises skills only. Eligibility calculations are 100% deterministic rules.
-                </span>
-              </aside>
-            </div>
+            <LearnHub
+              candidate={candidate}
+              onToast={triggerToast}
+              handleCompleteCourse={handleCompleteCourse}
+            />
           </div>
         )}
 
-        {/* ══════════════ 4. CANDIDATE PROFILE ══════════════ */}
+        {/* ══════════════ 4. CANDIDATE PROFILE (LINKEDIN & RESUME FORMAT) ══════════════ */}
         {activeTab === 'profile' && (
           <div className="screen-profile">
             <MobileTopBar />
 
-            <div className="screen-header">
-              <h1 className="screen-title">Candidate Profile</h1>
-              <p className="screen-sub">Manage your verified qualifications, skills, and credential history.</p>
-            </div>
-
-            <div className="profile-layout-grid">
-              {/* Profile Overview Card */}
-              <div className="profile-overview-card">
-                <div className="profile-avatar-row">
-                  <Avatar name={candidate?.name || 'Asha Patil'} size="lg" online />
-                  <div>
-                    <h3 className="text-lg font-extrabold text-[#14213D]">{candidate?.name || 'Asha Patil'}</h3>
-                    <span className="text-xs text-[#345BFF] font-semibold">
-                      {QUAL_NAMES[candidate?.facts.highestQualification?.ordinal || 3]} · Verified Candidate
-                    </span>
-                    <p className="text-xs text-[#64748B] mt-0.5">
-                      📍 {candidate?.facts.district || 'Pune'}, {candidate?.facts.state || 'Maharashtra'}
-                    </p>
-                  </div>
+            <div className="linkedin-profile-container">
+              {/* Profile Hero Card with Cover & Avatar */}
+              <div className="profile-hero-card">
+                <div className="profile-cover-photo">
+                  <div className="profile-cover-pattern" />
                 </div>
+                <div className="profile-header-content">
+                  <div className="profile-avatar-action-row">
+                    <div className="profile-avatar-large">
+                      <span>AP</span>
+                      <span className="profile-avatar-online" title="Active on Portal" />
+                    </div>
+                    <div className="profile-action-btn-group">
+                      <button
+                        onClick={() => triggerToast('Generating Verified Resume PDF...')}
+                        className="profile-btn-primary"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        Download Resume (PDF)
+                      </button>
+                      <button
+                        onClick={() => triggerToast('Profile is up to date and verified.')}
+                        className="profile-btn-secondary"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                        Edit Profile
+                      </button>
+                      <button
+                        onClick={() => triggerToast('Public profile link copied to clipboard!')}
+                        className="profile-btn-secondary"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                        Share
+                      </button>
+                    </div>
+                  </div>
 
-                <div className="border-t border-[#E2E8F0] pt-4 flex justify-between">
-                  <div>
-                    <span className="text-xs text-[#64748B]">Profile Status</span>
-                    <p className="text-sm font-bold text-[#10B981]">100% Verified ✓</p>
+                  <div className="profile-headline-block">
+                    <div className="profile-name-row">
+                      <h2 className="profile-name-title">{candidate?.name || 'Asha Patil'}</h2>
+                      <span className="profile-verified-badge">✓ Verified Candidate</span>
+                      <span className="profile-verified-id">ID: NSR-2026-MH-94812</span>
+                    </div>
+                    <p className="profile-headline-text">
+                      Aspiring Industrial Automation & Electrical Systems Technician | Certified Vocational Graduate
+                    </p>
+                    <div className="profile-meta-tags-row">
+                      <span className="profile-meta-item">
+                        📍 {candidate?.facts.district || 'Pune'}, {candidate?.facts.state || 'Maharashtra'}, India
+                      </span>
+                      <span>·</span>
+                      <span className="profile-meta-item" style={{ color: '#059669', fontWeight: 600 }}>
+                        🟢 Immediate Joining
+                      </span>
+                      <span>·</span>
+                      <span className="profile-meta-item">
+                        🎓 {QUAL_NAMES[candidate?.facts.highestQualification?.ordinal || 3]} (MSBSHSE Board)
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-xs text-[#64748B]">Completed Courses</span>
-                    <p className="text-sm font-bold text-[#14213D]">{candidate?.completedCourses.length || 0}</p>
-                  </div>
-                  <div>
-                    <span className="text-xs text-[#64748B]">Saved Roles</span>
-                    <p className="text-sm font-bold text-[#345BFF]">{savedIds.length}</p>
+
+                  <div className="profile-open-work-banner">
+                    <div className="open-work-text">
+                      <strong>Open to work</strong>
+                      <span>Electrical Technician, Warehouse Operations Associate, Solar PV Installer · Pune & Mumbai Region</span>
+                    </div>
+                    <button
+                      onClick={() => setActiveTab('match')}
+                      className="profile-btn-primary"
+                      style={{ fontSize: 12, padding: '6px 14px' }}
+                    >
+                      View 3 Matched Roles →
+                    </button>
                   </div>
                 </div>
               </div>
 
-              {/* Profile Details & Qualifications */}
-              <div className="profile-card-details">
-                <div className="profile-section-block">
-                  <h3 className="profile-block-title">Verified Education & Qualifications</h3>
-                  <div className="qual-chips-grid">
-                    {candidate?.facts.qualifications.map((q, idx) => (
-                      <span key={idx} className="qual-badge-chip">
-                        <span>🎓 {QUAL_NAMES[q.ordinal]}</span>
-                        <span className="text-[10px] bg-[#E6F7F2] text-[#10B981] font-bold px-1.5 py-0.5 rounded-full">Verified</span>
-                      </span>
-                    ))}
+              {/* 4-Stat Strip */}
+              <div className="profile-stats-strip">
+                <div className="profile-stat-box">
+                  <span className="profile-stat-box-num green">100%</span>
+                  <span className="profile-stat-box-label">Deterministic Verification</span>
+                </div>
+                <div className="profile-stat-box">
+                  <span className="profile-stat-box-num blue">{candidate?.completedCourses.length || 4}</span>
+                  <span className="profile-stat-box-label">Verified Course Certifications</span>
+                </div>
+                <div className="profile-stat-box">
+                  <span className="profile-stat-box-num">{deck.length}</span>
+                  <span className="profile-stat-box-label">Eligible Job Matches</span>
+                </div>
+                <div className="profile-stat-box">
+                  <span className="profile-stat-box-num">48</span>
+                  <span className="profile-stat-box-label">Recruiter Profile Views</span>
+                </div>
+              </div>
+
+              {/* FEATURE 1: VERIFIED SKILL EVIDENCE VAULT & CRYPTOGRAPHIC CREDENTIALS */}
+              <div style={{ marginTop: 24, marginBottom: 24 }}>
+                <EvidenceVaultSection onAddEvidence={() => triggerToast('Skill evidence registered and verified with cryptographic hash!')} />
+              </div>
+
+              {/* Two-Column Grid: Left (Experience & Education & Skills), Right (Credentials & Preferences) */}
+              <div className="profile-sections-grid">
+                {/* Left Column */}
+                <div className="profile-section-col">
+                  {/* About Block */}
+                  <div className="profile-card-block">
+                    <h3 className="profile-card-block-title">About</h3>
+                    <p style={{ fontSize: 13, lineHeight: 1.6, color: '#334155' }}>
+                      Dedicated and disciplined vocational technical graduate with verified competencies in industrial control panel wiring, workplace safety standards, basic electrical systems, and logistics inventory management. Holds 100% verified deterministic credentials on the National Career Exchange. Highly motivated to contribute practical, hands-on field expertise in manufacturing, power utilities, or fast-growing supply chain hubs.
+                    </p>
+                  </div>
+
+                  {/* Experience & Apprenticeships */}
+                  <div className="profile-card-block">
+                    <h3 className="profile-card-block-title">Experience & Practical Apprenticeships</h3>
+                    <div className="profile-timeline">
+                      <div className="profile-timeline-item">
+                        <div className="timeline-icon-box">⚡</div>
+                        <div className="timeline-content">
+                          <h4 className="timeline-role">Apprentice Electrical Technician</h4>
+                          <span className="timeline-company">MSEDCL Circle · Pune, Maharashtra</span>
+                          <span className="timeline-duration">Jul 2025 – Present · 8 mos · Government Apprenticeship</span>
+                          <p className="timeline-desc">
+                            Assisting senior engineers with control panel assembly, 3-phase circuit diagnostics, and preventive electrical maintenance. Adhering strictly to industrial safety protocols (IS/BIS guidelines).
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="profile-timeline-item">
+                        <div className="timeline-icon-box">📦</div>
+                        <div className="timeline-content">
+                          <h4 className="timeline-role">Warehouse Logistics Associate</h4>
+                          <span className="timeline-company">Flipkart Logistics Hub · Bhiwandi, Maharashtra</span>
+                          <span className="timeline-duration">Jan 2025 – Apr 2025 · 4 mos · Vocational Practicum</span>
+                          <p className="timeline-desc">
+                            Carried out inbound inventory intake, barcode RF scanning, batch sorting, and secure packaging dispatch with 99.8% compliance accuracy.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Verified Education */}
+                  <div className="profile-card-block">
+                    <h3 className="profile-card-block-title">Verified Education</h3>
+                    <div className="profile-timeline">
+                      <div className="profile-timeline-item">
+                        <div className="timeline-icon-box">🎓</div>
+                        <div className="timeline-content">
+                          <h4 className="timeline-role">Higher Secondary Certificate (12th Vocational Technical)</h4>
+                          <span className="timeline-company">Maharashtra State Board (MSBSHSE) · Pune Division</span>
+                          <span className="timeline-duration">2021 – 2023 · First Class with Distinction · Verified via DigiLocker ✓</span>
+                          <p className="timeline-desc">
+                            Major coursework in Applied Sciences, Engineering Drawing, and Workshop Technology.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="profile-timeline-item">
+                        <div className="timeline-icon-box">📜</div>
+                        <div className="timeline-content">
+                          <h4 className="timeline-role">Secondary School Certificate (SSC 10th)</h4>
+                          <span className="timeline-company">Pune Divisional Board</span>
+                          <span className="timeline-duration">2019 – 2021 · First Class · Verified ✓</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Verified Skills */}
+                  <div className="profile-card-block">
+                    <h3 className="profile-card-block-title">Verified Technical Skills & Competencies</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                      <div className="profile-skills-group">
+                        <span className="profile-skills-group-label">Core Technical & Vocational</span>
+                        <div className="profile-skill-chips">
+                          <span className="profile-skill-chip verified">
+                            <span>🛡️ Industrial Safety</span>
+                            <span className="profile-skill-chip-level">Lvl 4/5 · NSDC ✓</span>
+                          </span>
+                          <span className="profile-skill-chip verified">
+                            <span>⚡ Control Panel Wiring</span>
+                            <span className="profile-skill-chip-level">Lvl 4/5 · MSBVEE ✓</span>
+                          </span>
+                          <span className="profile-skill-chip verified">
+                            <span>🔌 Basic Electrical Systems</span>
+                            <span className="profile-skill-chip-level">Lvl 5/5 ✓</span>
+                          </span>
+                          <span className="profile-skill-chip verified">
+                            <span>☀️ Solar PV Installation</span>
+                            <span className="profile-skill-chip-level">Lvl 3/5 · Suryamitra ✓</span>
+                          </span>
+                          <span className="profile-skill-chip verified">
+                            <span>🔍 Electrical Fault Finding</span>
+                            <span className="profile-skill-chip-level">Lvl 3/5 ✓</span>
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="profile-skills-group">
+                        <span className="profile-skills-group-label">Operational & Digital</span>
+                        <div className="profile-skill-chips">
+                          <span className="profile-skill-chip verified">
+                            <span>📦 Inventory & Packing</span>
+                            <span className="profile-skill-chip-level">Lvl 4/5 ✓</span>
+                          </span>
+                          <span className="profile-skill-chip verified">
+                            <span>💻 Computer Literacy</span>
+                            <span className="profile-skill-chip-level">Lvl 4/5 ✓</span>
+                          </span>
+                          <span className="profile-skill-chip verified">
+                            <span>📊 Tally & Billing Basics</span>
+                            <span className="profile-skill-chip-level">Lvl 3/5 ✓</span>
+                          </span>
+                          <span className="profile-skill-chip verified">
+                            <span>🤝 Customer Service</span>
+                            <span className="profile-skill-chip-level">Lvl 4/5 ✓</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="profile-section-block">
-                  <h3 className="profile-block-title">Normalised Career Skills</h3>
-                  <div className="qual-chips-grid">
-                    {candidate?.skills.map((s, idx) => (
-                      <span key={idx} className="qual-badge-chip">
-                        <span className="capitalize">{s.skillId.replace(/-/g, ' ')}</span>
-                        <span className="text-[10px] bg-[#EBF0FF] text-[#345BFF] font-bold px-1.5 py-0.5 rounded-full">
-                          Lvl {s.proficiency}/5
-                        </span>
-                      </span>
-                    ))}
+                {/* Right Column: Verification & Preferences */}
+                <div className="profile-section-col">
+                  {/* Government Verification Card */}
+                  <div className="profile-card-block">
+                    <h3 className="profile-card-block-title">Identity & Government KYC</h3>
+                    <div className="verification-checklist">
+                      <div className="verify-item">
+                        <div className="verify-item-left">
+                          <span>🆔</span>
+                          <div>
+                            <b className="block text-xs text-[#14213D]">Aadhaar e-KYC</b>
+                            <span className="text-[11px] text-[#64748B]">UIDAI Masked: XXXX-XXXX-4819</span>
+                          </div>
+                        </div>
+                        <span className="verify-item-status">✓ Verified</span>
+                      </div>
+
+                      <div className="verify-item">
+                        <div className="verify-item-left">
+                          <span>🏛️</span>
+                          <div>
+                            <b className="block text-xs text-[#14213D]">Domicile Certificate</b>
+                            <span className="text-[11px] text-[#64748B]">Maharashtra Resident</span>
+                          </div>
+                        </div>
+                        <span className="verify-item-status">✓ Verified</span>
+                      </div>
+
+                      <div className="verify-item">
+                        <div className="verify-item-left">
+                          <span>🛡️</span>
+                          <div>
+                            <b className="block text-xs text-[#14213D]">National Skill Registry</b>
+                            <span className="text-[11px] text-[#64748B]">NSR-2026-MH-94812</span>
+                          </div>
+                        </div>
+                        <span className="verify-item-status">✓ Active</span>
+                      </div>
+
+                      <div className="verify-item">
+                        <div className="verify-item-left">
+                          <span>📋</span>
+                          <div>
+                            <b className="block text-xs text-[#14213D]">DigiLocker Integration</b>
+                            <span className="text-[11px] text-[#64748B]">All Board Marksheets Linked</span>
+                          </div>
+                        </div>
+                        <span className="verify-item-status">✓ Linked</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Certifications & Licences */}
+                  <div className="profile-card-block">
+                    <h3 className="profile-card-block-title">Certifications & Accreditations</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      <div style={{ display: 'flex', gap: 10 }}>
+                        <span style={{ fontSize: 20 }}>🏅</span>
+                        <div>
+                          <b className="block text-xs text-[#14213D]">NSQF Level 4 Electrical Specialist</b>
+                          <span className="text-[11px] text-[#64748B]">National Skill Development Corp · Jan 2025</span>
+                          <span className="block text-[10.5px] text-[#345BFF] mt-0.5">ID: NSDC-MH-88192 ✓</span>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: 10 }}>
+                        <span style={{ fontSize: 20 }}>⚡</span>
+                        <div>
+                          <b className="block text-xs text-[#14213D]">Industrial Control Panel Practicum</b>
+                          <span className="text-[11px] text-[#64748B]">MSBVEE Technical Board · Dec 2024</span>
+                          <span className="block text-[10.5px] text-[#345BFF] mt-0.5">ID: MSB-EL-4912 ✓</span>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: 10 }}>
+                        <span style={{ fontSize: 20 }}>🛡️</span>
+                        <div>
+                          <b className="block text-xs text-[#14213D]">Workplace Safety Compliance (BIS)</b>
+                          <span className="text-[11px] text-[#64748B]">Directorate of Vocational Education · Aug 2024</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Job Preferences */}
+                  <div className="profile-card-block">
+                    <h3 className="profile-card-block-title">Job Preferences & Availability</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 12.5 }}>
+                      <div>
+                        <span style={{ color: '#64748B', display: 'block', fontSize: 11 }}>Expected Monthly Pay</span>
+                        <b style={{ color: '#14213D' }}>₹18,000 – ₹24,000 / month</b>
+                      </div>
+                      <div>
+                        <span style={{ color: '#64748B', display: 'block', fontSize: 11 }}>Shift Preferences</span>
+                        <b style={{ color: '#14213D' }}>Day Shift, Flexible / Rotational</b>
+                      </div>
+                      <div>
+                        <span style={{ color: '#64748B', display: 'block', fontSize: 11 }}>Preferred Locations</span>
+                        <b style={{ color: '#14213D' }}>Pune, Thane, Navi Mumbai, Nashik</b>
+                      </div>
+                      <div>
+                        <span style={{ color: '#64748B', display: 'block', fontSize: 11 }}>Availability for Joining</span>
+                        <b style={{ color: '#059669' }}>Immediate (within 7 business days)</b>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Languages */}
+                  <div className="profile-card-block">
+                    <h3 className="profile-card-block-title">Languages Known</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 12.5 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <b>मराठी (Marathi)</b>
+                        <span style={{ color: '#64748B' }}>Native / Fluent</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <b>हिंदी (Hindi)</b>
+                        <span style={{ color: '#64748B' }}>Fluent</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <b>English</b>
+                        <span style={{ color: '#64748B' }}>Professional Working</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1372,78 +1858,6 @@ export default function App() {
           </div>
         )}
 
-        {/* ══════════════ 5. ADMIN / OFFICER CONSOLE (SEPARATED) ══════════════ */}
-        {activeTab === 'admin' && (
-          <div className="screen-admin">
-            <MobileTopBar />
-
-            <div className="screen-header">
-              <span className="admin-badge-tag">Restricted Access · Authorized Personnel</span>
-              <h1 className="screen-title">Officer Eligibility Rule Console</h1>
-              <p className="screen-sub">
-                Define and test mandatory opportunity eligibility rules against the candidate dataset in real-time.
-              </p>
-            </div>
-
-            <div className="admin-card">
-              <div className="admin-form-grid">
-                <div className="admin-field">
-                  <label>Rule Condition Type</label>
-                  <select
-                    value={officerRuleType}
-                    onChange={(e) => {
-                      setOfficerRuleType(e.target.value);
-                      if (e.target.value === 'QUAL_MIN_LEVEL') setOfficerRuleLabel('Requires minimum ITI qualification');
-                      else if (e.target.value === 'RESIDENCE_STATE') setOfficerRuleLabel('Maharashtra resident required');
-                      else if (e.target.value === 'AGE_RANGE') setOfficerRuleLabel('Age between 18 and 30 years');
-                    }}
-                  >
-                    <option value="QUAL_MIN_LEVEL">QUAL_MIN_LEVEL (Minimum Education)</option>
-                    <option value="RESIDENCE_STATE">RESIDENCE_STATE (State Resident)</option>
-                    <option value="RESIDENCE_DISTRICT">RESIDENCE_DISTRICT (District Resident)</option>
-                    <option value="AGE_RANGE">AGE_RANGE (Age Criteria)</option>
-                    <option value="CERT_REQUIRED">CERT_REQUIRED (Certification)</option>
-                  </select>
-                </div>
-                <div className="admin-field">
-                  <label>Rule Threshold Value</label>
-                  <input
-                    type="text"
-                    value={officerRuleVal}
-                    onChange={(e) => setOfficerRuleVal(e.target.value)}
-                    placeholder="e.g. 4 for ITI, Maharashtra"
-                  />
-                </div>
-                <div className="admin-field">
-                  <label>Candidate Transparency Label</label>
-                  <input
-                    type="text"
-                    value={officerRuleLabel}
-                    onChange={(e) => setOfficerRuleLabel(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <button onClick={handleOfficerPreview} className="btn-primary" style={{ alignSelf: 'flex-start' }}>
-                Calculate Live Impact on Candidate Pool
-              </button>
-
-              {officerPreview && (
-                <div className="admin-result-box">
-                  <div>
-                    <h4 className="text-base font-extrabold text-[#065F46]">Simulation Results</h4>
-                    <p className="text-xs text-[#065F46]">
-                      {officerPreview.eligibleCount} out of {officerPreview.totalCandidates} candidates in the active pool meet this criteria.
-                    </p>
-                  </div>
-                  <span className="text-2xl font-black text-[#059669]">
-                    {Math.round((officerPreview.eligibleCount / officerPreview.totalCandidates) * 100)}% Pass Rate
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </main>
 
       {/* ──────────── MOBILE BOTTOM NAVIGATION ──────────── */}
@@ -1554,6 +1968,40 @@ export default function App() {
         </div>
       )}
 
+      {/* ──────────── FLOATING AI ASSISTANT ──────────── */}
+      {/* ──────────── FLOATING AI CAREER ASSISTANT & VOICE TOUR ──────────── */}
+      <VoiceCareerAssistant
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        candidateName={candidate?.name || 'Asha'}
+        onWhatIfToggle={handleWhatIfToggle}
+        whatIfActive={whatIf}
+        onToast={triggerToast}
+      />
+
+      {/* ──────────── MOBILE BOTTOM NAVIGATION BAR ──────────── */}
+      <nav className="mobile-bottom-nav">
+        {SIDEBAR_ITEMS.map((item) => {
+          const isActive = activeTab === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`mobile-bottom-nav-item ${isActive ? 'active' : ''}`}
+              title={item.label}
+            >
+              <div className="mobile-bottom-icon-wrap">
+                {item.icon}
+                {item.id === 'match' && deck.length > 0 && (
+                  <span className="mobile-bottom-badge">{deck.length}</span>
+                )}
+              </div>
+              <span className="mobile-bottom-label">{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+
       {/* ──────────── TOAST MESSAGE ──────────── */}
       {toastMsg && (
         <div className="app-toast">
@@ -1563,6 +2011,12 @@ export default function App() {
           )}
         </div>
       )}
+
+      {/* ──────────── FAIRNESS-AWARE RANKING AUDIT MODAL ──────────── */}
+      <FairnessAuditModal
+        isOpen={showFairnessModal}
+        onClose={() => setShowFairnessModal(false)}
+      />
     </div>
   );
 }
