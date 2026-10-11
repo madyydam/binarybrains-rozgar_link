@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2F5BFF"/>
+      <stop offset="100%" stop-color="#5B4BEA"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38EF7D"/>
+      <stop offset="100%" stop-color="#11998E"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="url(#bgGrad)"/>
+  <!-- Central Icon Mark: Link / Upward Nexus -->
+  <g filter="url(#glow)">
+    <path d="M160 176 C160 140 188 112 224 112 L288 112 C324 112 352 140 352 176 L352 208 C352 225.6 337.6 240 320 240 C302.4 240 288 225.6 288 208 L288 184 C288 179.6 284.4 176 280 176 L232 176 C227.6 176 224 179.6 224 184 L224 232 C224 236.4 227.6 240 232 240 L256 240 C273.6 240 288 254.4 288 272 C288 289.6 273.6 304 256 304 L232 304 C196 304 160 276 160 240 Z" fill="#FFFFFF"/>
+    <path d="M352 336 C352 372 324 400 288 400 L224 400 C188 400 160 372 160 336 L160 304 C160 286.4 174.4 272 192 272 C209.6 272 224 286.4 224 304 L224 328 C224 332.4 227.6 336 232 336 L280 336 C284.4 336 288 332.4 288 328 L288 280 C288 275.6 284.4 272 280 272 L256 272 C238.4 272 224 257.6 224 240 C224 222.4 238.4 208 256 208 L280 208 C316 208 352 236 352 272 Z" fill="#FFFFFF" fill-opacity="0.95"/>
+    <!-- Rising Sparkle Dot / Opportunity Beacon -->
+    <circle cx="372" cy="140" r="32" fill="url(#accentGrad)"/>
+    <circle cx="372" cy="140" r="16" fill="#FFFFFF"/>
+  </g>
+</svg>

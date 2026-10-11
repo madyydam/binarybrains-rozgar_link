@@ -4,7 +4,6 @@
   "private": true,
   "scripts": {
     "dev": "concurrently \"pnpm --filter @rozgarlink/api dev\" \"pnpm --filter @rozgarlink/web dev\"",
-    "dev:next": "concurrently \"pnpm --filter @rozgarlink/api dev\" \"pnpm --filter @rozgarlink/web dev:next\"",
     "dev:api": "pnpm --filter @rozgarlink/api dev",
     "dev:web": "pnpm --filter @rozgarlink/web dev",
     "build": "pnpm --filter \"@rozgarlink/*\" build",

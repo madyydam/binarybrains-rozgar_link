@@ -49,7 +49,7 @@ export function explainMatch(params: ExplainerParams): ExplanationResult {
   if (params.status === 'NOT_ELIGIBLE') {
     const fails = params.ruleResults
       .filter((r) => r.outcome === 'FAIL')
-      .sort((a, b) => (priorityOrder[a.type] || 99) - (priorityOrder[b.type] || 99));
+      .sort((a, b) => ((a.type ? priorityOrder[a.type] : 99) || 99) - ((b.type ? priorityOrder[b.type] : 99) || 99));
 
     for (const f of fails) {
       failedRules.push({
@@ -77,7 +77,7 @@ export function explainMatch(params: ExplainerParams): ExplanationResult {
   if (params.status === 'NEEDS_INFO') {
     const unknowns = params.ruleResults.filter((r) => r.outcome === 'UNKNOWN');
     for (const u of unknowns) {
-      const field = u.missingField || u.type.toLowerCase();
+      const field = u.missingField || (u.type ? u.type.toLowerCase() : 'field');
       missingFields.push(field);
       points.push(t.missingFieldNotice.replace('{field}', field));
     }
@@ -150,41 +150,5 @@ export function explainMatch(params: ExplainerParams): ExplanationResult {
     failedRules: [],
     missingFields: []
   };
-}
-
-export function explainEligible(
-  rank: number,
-  score: number,
-  components: any,
-  passedRules: { label: string; outcome?: string }[],
-  aiAssistedSkills: string[] = [],
-  locale: SupportedLocale = 'en'
-) {
-  return {
-    headline: `Ranked #${rank} (Score: ${score}%)`,
-    reasons: [
-      `Fit score of ${score}% based on skills, location, and preferences`,
-      components?.commuteFit ? `Within desired commute distance` : `Commute fit: ${components?.distanceKm || 0} km`
-    ],
-    criteria: passedRules.map((r) => r.label),
-    aiNotice: aiAssistedSkills.length > 0 ? `AI-assisted skills: ${aiAssistedSkills.join(', ')}` : null
-  };
-}
-
-export function explainNotEligible(
-  failedRules: { label: string; candidateValue: string | null; requiredValue: string }[],
-  locale: SupportedLocale = 'en'
-) {
-  const parts = failedRules.map(
-    (f) => `${f.label} (Required: ${f.requiredValue}, Profile: ${f.candidateValue || 'none'})`
-  );
-  return {
-    strip: `Not eligible: ${parts.join('; ')}`,
-    failedRules
-  };
-}
-
-export function getDisclaimer(locale: SupportedLocale = 'en') {
-  return 'Eligibility follows the criteria stated by the opportunity. Confirm with the issuing office before applying.';
 }
 
