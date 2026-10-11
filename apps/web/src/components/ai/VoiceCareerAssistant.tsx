@@ -116,8 +116,88 @@ export const VoiceCareerAssistant: React.FC<VoiceCareerAssistantProps> = ({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  /* ── Preload and Cache Available Speech Voices ── */
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    const preloadVoices = () => {
+      window.speechSynthesis.getVoices();
+    };
+    preloadVoices();
+    window.speechSynthesis.onvoiceschanged = preloadVoices;
+    return () => {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.onvoiceschanged = null;
+      }
+    };
+  }, []);
+
   /* ─────────────────────────────────────────────────────────────────────────────
-   * TEXT-TO-SPEECH (TTS) ENGINE
+   * FEMALE SOFT & TECHNICAL VOICE SELECTOR
+   * ───────────────────────────────────────────────────────────────────────────── */
+  const selectFemaleSoftTechnicalVoice = (allVoices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null => {
+    if (!allVoices || allVoices.length === 0) return null;
+
+    const FEMALE_IDENTIFIERS = [
+      'heera', 'neerja', 'zira', 'jenny', 'aria', 'samantha', 'karen', 'victoria',
+      'veena', 'priya', 'kalpana', 'swara', 'female', 'woman', 'susan', 'catherine',
+      'hazel', 'stephanie', 'sonia', 'natasha', 'serena', 'ava', 'allison', 'alva'
+    ];
+
+    const MALE_IDENTIFIERS = [
+      'male', 'david', 'ravi', 'hemant', 'george', 'mark', 'richard', 'guy',
+      'james', 'brian', 'stefan', 'paul', 'daniel', 'oliver', 'alexander', 'cosimo'
+    ];
+
+    const isMale = (name: string) => {
+      const lower = name.toLowerCase();
+      return MALE_IDENTIFIERS.some(m => lower.includes(m));
+    };
+
+    const isFemale = (name: string) => {
+      const lower = name.toLowerCase();
+      return FEMALE_IDENTIFIERS.some(f => lower.includes(f));
+    };
+
+    // 1. First priority: Indian English Female (soft, authentic, technical regional resonance)
+    const indianFemale = allVoices.find(
+      v =>
+        (v.lang === 'en-IN' || v.name.toLowerCase().includes('india') || v.lang.includes('hi')) &&
+        isFemale(v.name) &&
+        !isMale(v.name)
+    );
+    if (indianFemale) return indianFemale;
+
+    // 2. Second priority: Natural / Neural Premium Female voices (Microsoft Natural, Google US/UK Female)
+    const naturalFemale = allVoices.find(
+      v =>
+        (v.name.toLowerCase().includes('natural') ||
+          v.name.toLowerCase().includes('online') ||
+          v.name.toLowerCase().includes('google') ||
+          v.name.toLowerCase().includes('microsoft')) &&
+        isFemale(v.name) &&
+        !isMale(v.name)
+    );
+    if (naturalFemale) return naturalFemale;
+
+    // 3. Third priority: Standard English Female voices (e.g., Microsoft Zira, Samantha)
+    const englishFemale = allVoices.find(
+      v => v.lang.startsWith('en') && isFemale(v.name) && !isMale(v.name)
+    );
+    if (englishFemale) return englishFemale;
+
+    // 4. Fourth priority: Any voice explicitly tagged female
+    const anyFemale = allVoices.find(v => isFemale(v.name) && !isMale(v.name));
+    if (anyFemale) return anyFemale;
+
+    // 5. Fallback: Any non-male English voice
+    const nonMale = allVoices.find(v => v.lang.startsWith('en') && !isMale(v.name));
+    if (nonMale) return nonMale;
+
+    return allVoices[0] || null;
+  };
+
+  /* ─────────────────────────────────────────────────────────────────────────────
+   * TEXT-TO-SPEECH (TTS) ENGINE - FEMALE SOFT & TECHNICAL CALIBRATION
    * ───────────────────────────────────────────────────────────────────────────── */
   const speak = (text: string, onDone?: () => void) => {
     if (!voiceNarrationEnabled || typeof window === 'undefined' || !('speechSynthesis' in window)) {
@@ -128,19 +208,17 @@ export const VoiceCareerAssistant: React.FC<VoiceCareerAssistantProps> = ({
     try {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 1.0;
-      utterance.pitch = 1.02;
 
-      const voices = window.speechSynthesis.getVoices();
-      // Look for natural English or Indian English voice
-      const preferred = voices.find(
-        v =>
-          v.lang === 'en-IN' ||
-          v.name.toLowerCase().includes('india') ||
-          v.lang.includes('hi') ||
-          v.lang.startsWith('en')
-      );
-      if (preferred) utterance.voice = preferred;
+      // Acoustic calibration for soft, technical, poised feminine delivery:
+      utterance.rate = 0.96;  // Measured, composed, articulate technical cadence
+      utterance.pitch = 1.15; // Soft, bright, gentle feminine pitch
+      utterance.volume = 1.0;
+
+      const allVoices = window.speechSynthesis.getVoices();
+      const femaleVoice = selectFemaleSoftTechnicalVoice(allVoices);
+      if (femaleVoice) {
+        utterance.voice = femaleVoice;
+      }
 
       utterance.onstart = () => setIsSpeaking(true);
       utterance.onend = () => {
@@ -416,7 +494,7 @@ export const VoiceCareerAssistant: React.FC<VoiceCareerAssistantProps> = ({
                 <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
               </span>
               <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">
-                {TOUR_STEPS[tourStepIndex].badge}
+                {TOUR_STEPS[tourStepIndex].badge} · 🌸 Female (Soft & Technical)
               </span>
             </div>
 
@@ -499,8 +577,8 @@ export const VoiceCareerAssistant: React.FC<VoiceCareerAssistantProps> = ({
         <span className="tracking-tight">
           {isSpeaking ? 'Speaking...' : isListening ? 'Listening...' : 'AI Career Assistant'}
         </span>
-        <span className="px-1.5 py-0.5 rounded-full bg-white/20 text-[10px] font-mono">
-          VOICE ON
+        <span className="px-1.5 py-0.5 rounded-full bg-pink-500/20 text-pink-200 text-[10px] font-mono border border-pink-400/30">
+          FEMALE VOICE
         </span>
       </button>
 
@@ -516,17 +594,28 @@ export const VoiceCareerAssistant: React.FC<VoiceCareerAssistantProps> = ({
               <div>
                 <h3 className="text-sm font-extrabold flex items-center gap-1.5">
                   ROZGARSATHI Voice AI
-                  <span className="text-[9px] bg-emerald-500/30 text-emerald-300 border border-emerald-400/30 px-1.5 py-0.2 rounded-full font-mono">
-                    LIVE
+                  <span className="text-[9px] bg-pink-500/30 text-pink-200 border border-pink-400/30 px-1.5 py-0.2 rounded-full font-mono">
+                    FEMALE · TECHNICAL
                   </span>
                 </h3>
-                <span className="text-[10px] text-blue-200">
-                  Context: <b className="capitalize text-white">{activeTab} Tab</b> · Voice Enabled
+                <span className="text-[10px] text-blue-200 flex items-center gap-1 mt-0.5">
+                  <span className="text-pink-300 font-semibold">🌸 Soft & Technical</span>
+                  <span>·</span>
+                  <b className="capitalize text-white">{activeTab} Tab</b>
                 </span>
               </div>
             </div>
 
             <div className="flex items-center gap-1.5">
+              {/* Test voice preview */}
+              <button
+                onClick={() => speak("Hello! I am your RozgarSathi Career Assistant. My voice is calibrated to a soft, technical tone. How can I guide your vocational growth today?")}
+                className="px-2 py-1 rounded-lg bg-pink-500/20 hover:bg-pink-500/30 text-pink-200 border border-pink-400/30 text-[10px] font-bold flex items-center gap-1 transition-colors"
+                title="Preview soft technical female voice"
+              >
+                <span>🌸</span> Test
+              </button>
+
               {/* Tour trigger */}
               <button
                 onClick={() => {
