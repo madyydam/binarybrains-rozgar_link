@@ -10,6 +10,11 @@ import {
   EvidenceVaultSection,
 } from './components/edge/EdgeFeatures';
 import { VoiceCareerAssistant } from './components/ai/VoiceCareerAssistant';
+import {
+  ResumeIntelligenceSection,
+  ExtractedSkillItem,
+  MatchedOpportunityItem,
+} from './components/profile/ResumeIntelligenceSection';
 
 /* ─────────────────────────────── Types ─────────────────────────────── */
 interface CandidateProfile {
@@ -523,6 +528,67 @@ export default function App() {
     fetchProfile();
     fetchMatches();
     triggerToast(`Skill added to verified profile.`);
+  };
+
+  /* ── Resume Intelligence & Skill Sync Handlers ── */
+  const handleSyncResumeSkills = async (newSkills: ExtractedSkillItem[]) => {
+    if (!candidate) return;
+    const current = [...candidate.skills];
+    newSkills.forEach((ns) => {
+      if (!current.some((cs) => cs.skillId === ns.skillId)) {
+        current.push({
+          skillId: ns.skillId,
+          proficiency: 4,
+          source: 'ai',
+          confirmed: true,
+          confidence: ns.confidence,
+        });
+      }
+    });
+
+    const updated = {
+      ...candidate,
+      skills: current,
+      profileVersion: (candidate.profileVersion || 1) + 1,
+    };
+    setCandidate(updated);
+
+    // Call backend API to persist skills & trigger recalculation of matches
+    try {
+      await fetch(`/v1/candidates/me/skills?candidateId=${currentCandidateId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ skills: current }),
+      });
+      fetchProfile();
+      fetchMatches();
+    } catch {}
+
+    // Unlock corresponding opportunities in deck if not already there
+    const unlockedIds: string[] = [];
+    if (newSkills.some((s) => s.skillId.includes('solar') || s.skillId.includes('electrical') || s.skillId.includes('panel'))) {
+      unlockedIds.push('msedcl', 'guj');
+    }
+    if (newSkills.some((s) => s.skillId.includes('warehouse') || s.skillId.includes('packing') || s.skillId.includes('inventory'))) {
+      unlockedIds.push('flip');
+    }
+    if (newSkills.some((s) => s.skillId.includes('excel') || s.skillId.includes('data') || s.skillId.includes('computer') || s.skillId.includes('tally'))) {
+      unlockedIds.push('nmc');
+    }
+    if (newSkills.some((s) => s.skillId.includes('safety') || s.skillId.includes('first-aid'))) {
+      unlockedIds.push('mahagen');
+    }
+    if (unlockedIds.length > 0) {
+      setDeck((prev) => Array.from(new Set([...unlockedIds, ...prev])));
+      setNotEligIds((prev) => prev.filter((id) => !unlockedIds.includes(id)));
+    }
+  };
+
+  const handleApplyMatchedOpp = (opp: MatchedOpportunityItem) => {
+    if (!appliedIds.includes(opp.id)) {
+      setAppliedIds((prev) => [...prev, opp.id]);
+    }
+    triggerToast(`Application submitted to ${opp.org} with verified resume!`);
   };
 
 
@@ -1515,8 +1581,27 @@ export default function App() {
                     </div>
                     <div className="profile-action-btn-group">
                       <button
-                        onClick={() => triggerToast('Generating Verified Resume PDF...')}
+                        onClick={() => {
+                          const el = document.getElementById('resume-intelligence-card');
+                          if (el) {
+                            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            el.classList.add('ring-4', 'ring-blue-400');
+                            setTimeout(() => el.classList.remove('ring-4', 'ring-blue-400'), 2500);
+                          }
+                          triggerToast('Upload or pick a sample resume below to auto-fetch skills & match opportunities!');
+                        }}
                         className="profile-btn-primary"
+                        style={{
+                          background: 'linear-gradient(135deg, #2563EB, #4F46E5)',
+                          boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)',
+                        }}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                        Upload Resume (AI Match)
+                      </button>
+                      <button
+                        onClick={() => triggerToast('Generating Verified Resume PDF...')}
+                        className="profile-btn-secondary"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                         Download Resume (PDF)
@@ -1596,6 +1681,18 @@ export default function App() {
                   <span className="profile-stat-box-num">48</span>
                   <span className="profile-stat-box-label">Recruiter Profile Views</span>
                 </div>
+              </div>
+
+              {/* FEATURE: RESUME INTELLIGENCE & AUTO SKILL-OPPORTUNITY MATCHER */}
+              <div style={{ marginTop: 24, marginBottom: 24 }}>
+                <ResumeIntelligenceSection
+                  currentSkills={(candidate?.skills || []).map((s) => ({ skillId: s.skillId, proficiency: s.proficiency }))}
+                  onSyncSkills={handleSyncResumeSkills}
+                  onApplyOpportunity={handleApplyMatchedOpp}
+                  appliedOpportunityIds={appliedIds}
+                  onToast={triggerToast}
+                  onNavigateToMatch={() => setActiveTab('match')}
+                />
               </div>
 
               {/* FEATURE 1: VERIFIED SKILL EVIDENCE VAULT & CRYPTOGRAPHIC CREDENTIALS */}
@@ -1723,6 +1820,33 @@ export default function App() {
                           </span>
                         </div>
                       </div>
+
+                      {/* Dynamic Resume-Extracted Skills Group */}
+                      {candidate?.skills && candidate.skills.some((s) => s.source === 'ai') && (
+                        <div className="profile-skills-group">
+                          <span className="profile-skills-group-label" style={{ color: '#2563EB', fontWeight: 700 }}>
+                            ⚡ Resume Extracted & Verified (AI Match)
+                          </span>
+                          <div className="profile-skill-chips">
+                            {candidate.skills
+                              .filter((s) => s.source === 'ai')
+                              .map((s) => {
+                                const formattedName = s.skillId
+                                  .split('-')
+                                  .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                                  .join(' ');
+                                return (
+                                  <span key={s.skillId} className="profile-skill-chip verified" style={{ borderColor: '#3B82F6', background: '#EFF6FF' }}>
+                                    <span style={{ color: '#1D4ED8', fontWeight: 600 }}>✨ {formattedName}</span>
+                                    <span className="profile-skill-chip-level" style={{ background: '#DBEAFE', color: '#1E40AF' }}>
+                                      Lvl {s.proficiency}/5 · Parsed ✓
+                                    </span>
+                                  </span>
+                                );
+                              })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -396,6 +396,16 @@ export const VoiceCareerAssistant: React.FC<VoiceCareerAssistantProps> = ({
         reply =
           'Opening the Learn Hub! I recommend the 12-hour Industrial Safety module or Rooftop Solar PV track to close your skill gap and qualify for higher pay.';
       }
+      // Command: Resume Upload & Skill Extraction
+      else if (lower.includes('resume') || lower.includes('upload') || lower.includes('cv') || lower.includes('extract skill')) {
+        targetTabChange = 'profile';
+        reply =
+          'Navigating to your Profile! You can upload your PDF or TXT resume using our AI Resume Intelligence tool. It will automatically extract your technical skills and display matching opportunities instantly!';
+        setTimeout(() => {
+          const el = document.getElementById('resume-intelligence-card');
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 600);
+      }
       // Command: Profile Tab Navigation
       else if (lower.includes('profile') || lower.includes('vault') || lower.includes('certificate') || lower.includes('digilocker')) {
         targetTabChange = 'profile';
@@ -440,7 +450,7 @@ export const VoiceCareerAssistant: React.FC<VoiceCareerAssistantProps> = ({
     match: ['Why am I matched with Flipkart?', 'Simulate ITI qualification (What-If)', 'Explain Fairness Bias Audit'],
     growth: ['Launch Zepto mock interview', 'What coding challenge is open?', 'View SIH 2026 hackathons'],
     learn: ['Recommend highest-pay course', 'Explore Solar PV Engineering track', 'Show free NSDC modules'],
-    profile: ['How do I upload new evidence?', 'What is my National Skill Registry ID?', 'Download verified resume PDF'],
+    profile: ['Upload resume & auto-match jobs', 'How do I upload new evidence?', 'What is my National Skill Registry ID?'],
     admin: ['Platform verification statistics', 'Audit transparency logs', 'Candidate match throughput']
   };
 
