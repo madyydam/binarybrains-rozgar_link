@@ -352,7 +352,7 @@ export default function AppPage() {
               <span className="font-extrabold text-[#0F1B3D] text-base">Rozgar</span>
               <span className="font-extrabold text-[#2F5BFF] text-base">Link</span>
               <span className="text-[9px] block text-[#64748B] font-medium tracking-wide">
-                by FutoraOne
+                by RZGARSATHI
               </span>
             </div>
           </div>
